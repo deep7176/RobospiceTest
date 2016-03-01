@@ -36,8 +36,8 @@ public class ReverseStringRequest extends SpiceRequest<String> {
             System.setProperty("http.keepAlive", "false");
         }
 
-        HttpURLConnection urlConnection = (HttpURLConnection) new URL(url)
-                .openConnection();
+        HttpURLConnection urlConnection =
+                (HttpURLConnection) new URL(url).openConnection();
         String result = IOUtils.toString(urlConnection.getInputStream());
         urlConnection.disconnect();
 

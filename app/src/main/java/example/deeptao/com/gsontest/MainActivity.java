@@ -1,11 +1,8 @@
 package example.deeptao.com.gsontest;
 
-import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.Window;
@@ -16,23 +13,16 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.octo.android.robospice.SpiceManager;
-import com.octo.android.robospice.UncachedSpiceService;
-import com.octo.android.robospice.persistence.DurationInMillis;
 import com.octo.android.robospice.persistence.exception.SpiceException;
 import com.octo.android.robospice.request.listener.RequestListener;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String KEY_RESULT = "result";
 
     /***
-     * With {@link UncachedSpiceService} there is no cache management.
+     * With {@link CustomSpiceService} there is no cache management.
      * Remember to declare it in AndroidManifest.xml
      */
     private SpiceManager spiceManager = new SpiceManager(CustomSpiceService.class);

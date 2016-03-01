@@ -3,7 +3,6 @@ package example.deeptao.com.gsontest;
 import android.app.Application;
 import android.util.Log;
 
-import com.octo.android.robospice.SpiceService;
 import com.octo.android.robospice.SpringAndroidSpiceService;
 import com.octo.android.robospice.persistence.CacheManager;
 import com.octo.android.robospice.persistence.exception.CacheCreationException;
