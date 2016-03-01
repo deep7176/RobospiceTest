@@ -1,15 +1,25 @@
 package example.deeptao.com.gsontest;
 
+import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.view.View;
+import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.octo.android.robospice.SpiceManager;
+import com.octo.android.robospice.UncachedSpiceService;
 import com.octo.android.robospice.persistence.DurationInMillis;
 import com.octo.android.robospice.persistence.exception.SpiceException;
 import com.octo.android.robospice.request.listener.RequestListener;
@@ -17,47 +27,31 @@ import com.octo.android.robospice.request.listener.RequestListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity {
 
-    static final String JSON_SAMPLE = "[\n" +
-            "{\n" +
-            "  \"id\":1,\n" +
-            "  \"ad_name\":\"Test Ad\",\n" +
-            "  \"ad_text\":\"This is my ad text\"\n" +
-            "},\n" +
-            "{\n" +
-            "  \"id\":2,\n" +
-            "  \"ad_name\":\"Test Ad\",\n" +
-            "  \"ad_text\":\"This is my ad text\"\n" +
-            "},\n" +
-            "{\n" +
-            "  \"id\":3,\n" +
-            "  \"ad_name\":\"Test Ad\",\n" +
-            "  \"ad_text\":\"This is my ad text\"\n" +
-            "},\n" +
-            "{\n" +
-            "  \"id\":4,\n" +
-            "  \"ad_name\":\"Test Ad\",\n" +
-            "  \"ad_text\":\"This is my ad text\"\n" +
-            "},\n" +
-            "{\n" +
-            "  \"id\":5,\n" +
-            "  \"ad_name\":\"Test Ad\",\n" +
-            "  \"ad_text\":\"This is my ad text\"\n" +
-            "}\n" +
-            "]";
+    private static final String KEY_RESULT = "result";
 
-    private TextView mTextView;
-    private List<Ad> mList;
+    /***
+     * With {@link UncachedSpiceService} there is no cache management.
+     * Remember to declare it in AndroidManifest.xml
+     */
+    private SpiceManager spiceManager = new SpiceManager(CustomSpiceService.class);
 
-    protected SpiceManager spiceManager = new SpiceManager(CustomSpiceService.class);
-    private String lastRequestCacheKey;
+    private TextView resultTextView;
+    private EditText wordField;
 
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+        setContentView(R.layout.activity_main);
+        initUIComponents();
+    }
 
     @Override
     protected void onStart() {
-        super.onStart();
         spiceManager.start(this);
+        super.onStart();
     }
 
     @Override
@@ -66,74 +60,71 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onStop();
     }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-        mTextView = (TextView) findViewById(R.id.text_view);
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(this);
+    private void initUIComponents() {
+        Button reverseButton = (Button) findViewById(R.id.reverse_button);
+        wordField = (EditText) findViewById(R.id.word_field);
+        resultTextView = (TextView) findViewById(R.id.result);
+        reverseButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                performRequest(wordField.getText().toString());
+            }
+        });
     }
 
-    private void performRequest(String user) {
+    private void performRequest(String searchQuery) {
+        resultTextView.setText("");
+
         MainActivity.this.setProgressBarIndeterminateVisibility(true);
 
-        FollowersRequest request = new FollowersRequest(user);
-        lastRequestCacheKey = request.createCacheKey();
+        ReverseStringRequest request = new ReverseStringRequest(searchQuery);
+        spiceManager.execute(request, new ReverseStringRequestListener());
 
-        spiceManager.execute(request, lastRequestCacheKey, DurationInMillis.ONE_MINUTE, new ListFollowersRequestListener());
+        hideKeyboard();
+    }
+
+    private void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(wordField.getWindowToken(), 0);
+
+        LinearLayout linearLayout = (LinearLayout) findViewById(R.id.container);
+        linearLayout.requestFocus();
+    }
+
+    private final class ReverseStringRequestListener implements
+            RequestListener<String> {
+        @Override
+        public void onRequestFailure(SpiceException spiceException) {
+            Toast.makeText(MainActivity.this,
+                    "Error: " + spiceException.getMessage(), Toast.LENGTH_SHORT)
+                    .show();
+        }
+
+        @Override
+        public void onRequestSuccess(String result) {
+            MainActivity.this.setProgressBarIndeterminateVisibility(false);
+            resultTextView.setText(getString(R.string.result_text, result));
+        }
     }
 
     @Override
-    public void onClick(View view) {
-        performRequest("google");
+    protected void onSaveInstanceState(Bundle outState) {
+        String result = resultTextView.getText().toString();
+        if (!TextUtils.isEmpty(result)) {
+            outState.putString(KEY_RESULT, result);
+        }
+        super.onSaveInstanceState(outState);
     }
 
-    //inner class of your spiced Activity
-    private class ListFollowersRequestListener implements RequestListener<FollowerList> {
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        spiceManager.addListenerIfPending(String.class, null,
+                new ReverseStringRequestListener());
 
-        @Override
-        public void onRequestFailure(SpiceException e) {
-            //update your UI
-            String text = e.getMessage();
-            mTextView.setText(text);
+        if (savedInstanceState.containsKey(KEY_RESULT)) {
+            String result = savedInstanceState.getString(KEY_RESULT);
+            resultTextView.setText(result);
         }
-
-        @Override
-        public void onRequestSuccess(FollowerList listFollowers) {
-            String text = "Nothing";
-
-            for (Follower listFollower : listFollowers) {
-                text += listFollower.getLogin();
-                text += "\n";
-            }
-
-            mTextView.setText(text);
-        }
+        super.onRestoreInstanceState(savedInstanceState);
     }
-
-    //We use ArrayList as base class since the root element is a JSON array
-    public class FollowerList extends ArrayList<Follower> {
-        private static final long serialVersionUID = 8192333539004718470L;
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public class Follower {
-
-        @JsonProperty("login")
-        private String login;
-
-        public String getLogin() {
-            return login;
-        }
-
-        public void setLogin(String login) {
-            this.login = login;
-        }
-    }
-
 }
