@@ -2,6 +2,7 @@ package example.deeptao.com.gsontest;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.View;
@@ -15,6 +16,7 @@ import android.widget.Toast;
 
 import com.octo.android.robospice.SpiceManager;
 import com.octo.android.robospice.persistence.exception.SpiceException;
+import com.octo.android.robospice.request.listener.PendingRequestListener;
 import com.octo.android.robospice.request.listener.RequestListener;
 
 public class MainActivity extends AppCompatActivity {
@@ -33,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+        //requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.activity_main);
         initUIComponents();
     }
@@ -51,10 +53,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initUIComponents() {
-        Button reverseButton = (Button) findViewById(R.id.reverse_button);
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         wordField = (EditText) findViewById(R.id.word_field);
         resultTextView = (TextView) findViewById(R.id.result);
-        reverseButton.setOnClickListener(new View.OnClickListener() {
+        fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 performRequest(wordField.getText().toString());
@@ -65,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private void performRequest(String searchQuery) {
         resultTextView.setText("");
 
-        MainActivity.this.setProgressBarIndeterminateVisibility(true);
+        //MainActivity.this.setProgressBarIndeterminateVisibility(true);
 
         ReverseStringRequest request = new ReverseStringRequest(searchQuery);
         spiceManager.execute(request, new ReverseStringRequestListener());
@@ -81,8 +83,8 @@ public class MainActivity extends AppCompatActivity {
         linearLayout.requestFocus();
     }
 
-    private final class ReverseStringRequestListener implements
-            RequestListener<String> {
+    final class ReverseStringRequestListener implements RequestListener<String>,
+            PendingRequestListener<String> {
         @Override
         public void onRequestFailure(SpiceException spiceException) {
             Toast.makeText(MainActivity.this,
@@ -94,6 +96,11 @@ public class MainActivity extends AppCompatActivity {
         public void onRequestSuccess(String result) {
             MainActivity.this.setProgressBarIndeterminateVisibility(false);
             resultTextView.setText(getString(R.string.result_text, result));
+        }
+
+        @Override
+        public void onRequestNotFound() {
+
         }
     }
 
@@ -108,8 +115,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        spiceManager.addListenerIfPending(String.class, null,
-                new ReverseStringRequestListener());
+        spiceManager.addListenerIfPending(String.class, null, new ReverseStringRequestListener());
 
         if (savedInstanceState.containsKey(KEY_RESULT)) {
             String result = savedInstanceState.getString(KEY_RESULT);
